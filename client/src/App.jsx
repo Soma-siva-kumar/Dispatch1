@@ -55,6 +55,18 @@ function App() {
         {/* Officer Routes */}
         <Route path="/officer" element={<ProtectedRoute allowedRoles={['officer']}><OfficerView /></ProtectedRoute>} />
         
+        {/* Unauthorized */}
+        <Route path="/unauthorized" element={
+          <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: '2rem' }}>
+            <div className="card" style={{ maxWidth: 440, textAlign: 'center', padding: '2.5rem' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🚫</div>
+              <h2 style={{ marginBottom: '0.5rem', color: 'var(--accent-red)' }}>Access Denied</h2>
+              <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>You don't have permission to access this page.</p>
+              <button className="btn btn-primary" onClick={() => window.history.back()}>← Go Back</button>
+            </div>
+          </div>
+        } />
+
         {/* Default Redirect */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

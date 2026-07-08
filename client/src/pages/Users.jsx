@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import API from '../api/axios';
 import Navbar from '../components/Navbar';
 import toast from 'react-hot-toast';
-import { Search, Mail, Phone, Calendar, Shield } from 'lucide-react';
+import { Search, Mail, Phone, Calendar, Shield, Edit2, Trash2, X } from 'lucide-react';
 
 const ROLE_BADGES = {
   admin: 'badge-p1',
@@ -16,6 +16,11 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+
+  // Edit/Delete State
+  const [editingUser, setEditingUser] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', email: '', role: '', phone: '', badgeNumber: '', isActive: true });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -40,6 +45,46 @@ export default function Users() {
     const matchRole = !roleFilter || u.role === roleFilter;
     return matchSearch && matchRole;
   });
+
+  const handleEditClick = (user) => {
+    setEditingUser(user);
+    setEditForm({
+      name: user.name || '',
+      email: user.email || '',
+      role: user.role || 'citizen',
+      phone: user.phone || '',
+      badgeNumber: user.badgeNumber || '',
+      isActive: user.isActive !== undefined ? user.isActive : true
+    });
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const { data } = await API.patch(`/auth/${editingUser._id}`, editForm);
+      toast.success('User updated successfully');
+      setUsers(prev => prev.map(u => u._id === data._id ? data : u));
+      setEditingUser(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update user');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteClick = async (userId) => {
+    if (!window.confirm('Are you sure you want to delete this user? This will also delete their assigned patrol unit if they are an officer.')) {
+      return;
+    }
+    try {
+      await API.delete(`/auth/${userId}`);
+      toast.success('User deleted successfully');
+      setUsers(prev => prev.filter(u => u._id !== userId));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete user');
+    }
+  };
 
   return (
     <div className="app-layout">
@@ -83,7 +128,7 @@ export default function Users() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
-                    {['User', 'Contact Info', 'Role', 'Badge / Unit', 'Last Access', 'Registered'].map(h => (
+                    {['User', 'Contact Info', 'Role', 'Badge / Unit', 'Last Access', 'Registered', 'Actions'].map(h => (
                       <th
                         key={h}
                         style={{
@@ -203,12 +248,146 @@ export default function Users() {
                           </span>
                         </div>
                       </td>
+
+                      {/* Actions */}
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            className="btn btn-ghost btn-sm btn-icon"
+                            onClick={() => handleEditClick(u)}
+                            title="Edit User"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm btn-icon"
+                            style={{ color: 'var(--accent-red)' }}
+                            onClick={() => handleDeleteClick(u._id)}
+                            title="Delete User"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             )}
           </div>
+
+          {/* Edit User Modal Overlay */}
+          {editingUser && (
+            <div style={{
+              position: 'fixed',
+              top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(5px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}>
+              <div className="card" style={{ maxWidth: 460, width: '90%', padding: '2rem', position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  style={{
+                    position: 'absolute',
+                    top: '1.25rem', right: '1.25rem',
+                    background: 'none', border: 'none',
+                    color: 'var(--text-secondary)', cursor: 'pointer'
+                  }}
+                >
+                  <X size={20} />
+                </button>
+
+                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  ✏️ Edit User Details
+                </h3>
+
+                <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Full Name *</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editForm.name}
+                      onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Email Address *</label>
+                    <input
+                      type="email"
+                      className="form-input"
+                      value={editForm.email}
+                      onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Phone Number</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editForm.phone}
+                      onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">System Role *</label>
+                    <select
+                      className="form-select"
+                      value={editForm.role}
+                      onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))}
+                      required
+                    >
+                      <option value="citizen">Citizen</option>
+                      <option value="dispatcher">Dispatcher</option>
+                      <option value="officer">Officer</option>
+                      <option value="admin">Administrator</option>
+                    </select>
+                  </div>
+
+                  {editForm.role === 'officer' && (
+                    <div className="form-group">
+                      <label className="form-label">Badge Number *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={editForm.badgeNumber}
+                        onChange={e => setEditForm(f => ({ ...f, badgeNumber: e.target.value }))}
+                        required
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      onClick={() => setEditingUser(null)}
+                      disabled={saving}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={saving}
+                    >
+                      {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -25,10 +25,10 @@ router.get('/summary', auth(['dispatcher', 'admin']), async (req, res) => {
 
     let avgResponseTime = 0;
     if (resolvedWithTimes.length) {
-      const total = resolvedWithTimes.reduce((sum, i) => {
+      const totalMinutes = resolvedWithTimes.reduce((sum, i) => {
         return sum + (new Date(i.arrivedAt) - new Date(i.dispatchedAt)) / 60000;
       }, 0);
-      avgResponseTime = (total / resolvedWithTimes.length).toFixed(1);
+      avgResponseTime = (totalMinutes / resolvedWithTimes.length).toFixed(1);
     }
 
     res.json({ total, pending, dispatched, resolved, activeUnits, availableUnits, avgResponseTime });

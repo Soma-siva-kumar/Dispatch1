@@ -9,13 +9,25 @@ export function SocketProvider({ children }) {
   const socketRef = useRef(null);
   const [connected, setConnected] = useState(false);
   const [escalations, setEscalations] = useState([]);
+  const [socketReady, setSocketReady] = useState(false);
 
   useEffect(() => {
+    // Don't connect if no user is logged in
+    if (!user) {
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+      setConnected(false);
+      setSocketReady(false);
+      return;
+    }
+
     const token = localStorage.getItem('diq_token');
     socketRef.current = io('http://localhost:5000', {
       auth: { token: token || null },
       transports: ['websocket'],
     });
+
+    setSocketReady(true);
 
     socketRef.current.on('connect', () => setConnected(true));
     socketRef.current.on('disconnect', () => setConnected(false));
@@ -41,6 +53,8 @@ export function SocketProvider({ children }) {
 
     return () => {
       socketRef.current?.disconnect();
+      socketRef.current = null;
+      setSocketReady(false);
     };
   }, [user]);
 
@@ -69,6 +83,7 @@ export function SocketProvider({ children }) {
     <SocketContext.Provider value={{
       socket: socketRef.current,
       connected,
+      socketReady,
       escalations,
       clearEscalation,
       joinUnitRoom,
@@ -82,3 +97,4 @@ export function SocketProvider({ children }) {
 }
 
 export const useSocket = () => useContext(SocketContext);
+

@@ -6,7 +6,7 @@ import API from '../api/axios';
 import { useSocket } from '../context/SocketContext';
 import Navbar from '../components/Navbar';
 import { IncidentCard, PriorityBadge, StatusBadge } from '../components/IncidentComponents';
-import { AlertTriangle, Zap, X, CheckCircle, MapPin, Navigation } from 'lucide-react';
+import { AlertTriangle, Zap, X, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Fix Leaflet default icons
@@ -235,16 +235,19 @@ export default function ControlRoom() {
                             Status: {inc.status}
                           </div>
                         </Popup>
-                        {inc.priority === 'P1' && (
-                          <Circle
-                            center={[inc.location.coordinates[1], inc.location.coordinates[0]]}
-                            radius={300}
-                            color={PRIORITY_COLORS.P1}
-                            fillOpacity={0.05}
-                          />
-                        )}
                       </Marker>
                     )
+                  ))}
+
+                  {/* P1 Danger Zone Circles (separate from Markers) */}
+                  {incidents.filter(i => i.status !== 'resolved' && i.priority === 'P1' && i.location?.coordinates).map(inc => (
+                    <Circle
+                      key={`circle-${inc._id}`}
+                      center={[inc.location.coordinates[1], inc.location.coordinates[0]]}
+                      radius={300}
+                      color={PRIORITY_COLORS.P1}
+                      fillOpacity={0.05}
+                    />
                   ))}
 
                   {/* Unit Markers */}

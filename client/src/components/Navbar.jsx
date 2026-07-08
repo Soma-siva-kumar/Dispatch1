@@ -1,8 +1,15 @@
+import { useState, useEffect } from 'react';
 import { Bell, Clock } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 
 export default function Navbar({ title }) {
   const { escalations, clearEscalation } = useSocket();
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <header className="navbar">
@@ -17,7 +24,7 @@ export default function Navbar({ title }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
           <Clock size={13} />
-          {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+          {time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
         </div>
 
         {escalations.length > 0 && (
@@ -47,3 +54,4 @@ export default function Navbar({ title }) {
     </header>
   );
 }
+

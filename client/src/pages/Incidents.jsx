@@ -4,7 +4,7 @@ import { useSocket } from '../context/SocketContext';
 import Navbar from '../components/Navbar';
 import { PriorityBadge, StatusBadge } from '../components/IncidentComponents';
 import toast from 'react-hot-toast';
-import { Search, Filter } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 export default function Incidents() {
   const [incidents, setIncidents] = useState([]);

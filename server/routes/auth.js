@@ -86,11 +86,75 @@ router.get('/me', async (req, res) => {
   }
 });
 
-// GET /api/auth — List all users (admin only)
-router.get('/', auth(['admin']), async (req, res) => {
+// GET /api/auth — List all users (admin and dispatcher only)
+router.get('/', auth(['admin', 'dispatcher']), async (req, res) => {
   try {
     const users = await User.find().select('-password').populate('assignedUnit');
     res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PATCH /api/auth/:id — Update user details (admin only)
+router.patch('/:id', auth(['admin']), async (req, res) => {
+  try {
+    const { name, email, role, phone, badgeNumber, isActive } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (role) user.role = role;
+    if (phone) user.phone = phone;
+    if (badgeNumber) user.badgeNumber = badgeNumber;
+    if (isActive !== undefined) user.isActive = isActive;
+
+    await user.save();
+
+    // If role changed to officer, create PatrolUnit if not exists
+    if (role === 'officer' && !user.assignedUnit) {
+      try {
+        const patrolUnit = await PatrolUnit.create({
+          unitId: `PCR-${badgeNumber || Math.floor(1000 + Math.random() * 9000)}`,
+          officerName: user.name,
+          officerBadge: badgeNumber,
+          assignedOfficer: user._id,
+          status: 'available',
+          vehicleType: 'patrol_car',
+          location: {
+            type: 'Point',
+            coordinates: [
+              78.4867 + (Math.random() - 0.5) * 0.05,
+              17.3850 + (Math.random() - 0.5) * 0.05
+            ]
+          }
+        });
+        user.assignedUnit = patrolUnit._id;
+        await user.save();
+      } catch (err) {
+        console.error('Failed to create patrol unit for updated officer:', err.message);
+      }
+    }
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// DELETE /api/auth/:id — Delete user (admin only)
+router.delete('/:id', auth(['admin']), async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Also delete their patrol unit if they are an officer
+    if (user.assignedUnit) {
+      await PatrolUnit.findByIdAndDelete(user.assignedUnit);
+    }
+
+    res.json({ message: 'User deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -2,17 +2,24 @@ import { useState, useEffect } from 'react';
 import API from '../api/axios';
 import Navbar from '../components/Navbar';
 import { PriorityBadge, StatusBadge } from '../components/IncidentComponents';
+import { useSocket } from '../context/SocketContext';
 import toast from 'react-hot-toast';
 
 export default function MyIncidents() {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { onEvent } = useSocket();
 
   useEffect(() => {
     API.get('/incidents/mine')
       .then(res => setIncidents(res.data))
       .catch(() => toast.error('Failed to load your reports'))
       .finally(() => setLoading(false));
+
+    const cleanup = onEvent?.('incident:update', ({ incident }) => {
+      setIncidents(prev => prev.map(i => i._id === incident._id ? incident : i));
+    });
+    return () => cleanup?.();
   }, []);
 
   return (

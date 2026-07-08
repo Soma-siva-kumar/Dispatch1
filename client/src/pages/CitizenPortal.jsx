@@ -6,7 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { MapPin, AlertTriangle, Send, Shield } from 'lucide-react';
+import { MapPin, AlertTriangle, Send } from 'lucide-react';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -60,11 +60,6 @@ export default function CitizenPortal() {
       }
     );
   };
-
-  const markerIcon = L.divIcon({
-    html: `<div style="width:32px;height:32px;border-radius:50%;background:#ff1744;border:3px solid white;box-shadow:0 0 15px #ff174480;display:flex;align-items:center;justify-content:center;font-size:14px;">📍</div>`,
-    className: '', iconSize: [32, 32], iconAnchor: [16, 16],
-  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
