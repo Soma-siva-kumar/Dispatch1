@@ -5,6 +5,7 @@
 
 const PatrolUnit = require('../models/PatrolUnit');
 const Incident = require('../models/Incident');
+const { notifyOfficerOfDispatch } = require('./notificationService');
 
 /**
  * Haversine distance formula (km)
@@ -62,7 +63,7 @@ async function findNearestUnits(coordinates, limit = 5) {
  * @param {string|null} overrideUnitId - manual override
  * @returns {{ unit, incident }}
  */
-async function autoDispatch(incidentId, overrideUnitId = null, io = null) {
+async function autoDispatch(incidentId, overrideUnitId = null, io = null, dispatcherName = null) {
   const incident = await Incident.findById(incidentId);
   if (!incident) throw new Error('Incident not found');
 
@@ -90,15 +91,26 @@ async function autoDispatch(incidentId, overrideUnitId = null, io = null) {
   incident.timeline.push({ status: 'dispatched', note: `Dispatched unit ${unit.unitId}` });
   await incident.save();
 
+  await incident.populate([
+    { path: 'assignedUnit' },
+    { path: 'reportedBy', select: 'name email phone' }
+  ]);
+
   // Emit socket event if io provided
   if (io) {
-    io.emit('incident:update', { incident: await incident.populate('assignedUnit reportedBy') });
+    io.emit('incident:update', { incident });
     // Notify the specific officer
     io.to(`unit:${unit._id}`).emit('unit:dispatch', {
       incident: incident.toObject(),
       unit: unit.toObject(),
       message: `🚨 You have been dispatched to: ${incident.title}`,
     });
+  }
+
+  try {
+    await notifyOfficerOfDispatch({ incident, unit, dispatcherName, io });
+  } catch (e) {
+    console.warn('[Notifications] officer dispatch alert failed:', e.message);
   }
 
   return { unit, incident };

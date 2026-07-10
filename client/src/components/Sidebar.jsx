@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import {
@@ -34,17 +34,33 @@ export default function Sidebar() {
   const { connected, escalations } = useSocket();
   const navigate = useNavigate();
 
+  const getSidebarHeader = () => {
+    switch (user?.role) {
+      case 'admin':
+        return { text: 'Admin', sub: 'Control Center' };
+      case 'dispatcher':
+        return { text: 'Dispatcher', sub: 'Control Room' };
+      case 'officer':
+        return { text: 'Officer', sub: 'Terminal' };
+      case 'citizen':
+      default:
+        return { text: 'Prakasam Police', sub: 'Services' };
+    }
+  };
+  const header = getSidebarHeader();
   const items = NAV_ITEMS[user?.role] || NAV_ITEMS.citizen;
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-logo">
-        <div className="logo-icon">🚨</div>
-        <div>
-          <div className="logo-text">DispatchIQ</div>
-          <div className="logo-sub">Emergency Response</div>
+      <Link to="/" className="sidebar-logo" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+        <div className="logo-icon" style={{ background: 'transparent', boxShadow: 'none', border: '1.5px solid #ff9933', borderRadius: '50%', overflow: 'hidden' }}>
+          <img src="/prakasam_police_badge.jpg" alt="Prakasam Police Badge" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
-      </div>
+        <div>
+          <div className="logo-text">{header.text}</div>
+          <div className="logo-sub">{header.sub}</div>
+        </div>
+      </Link>
 
       <nav className="sidebar-nav">
         <div className="nav-section-label">Navigation</div>

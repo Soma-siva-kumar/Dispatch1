@@ -9,6 +9,10 @@ const authRoutes = require('./routes/auth');
 const incidentRoutes = require('./routes/incidents');
 const unitRoutes = require('./routes/units');
 const analyticsRoutes = require('./routes/analytics');
+const voiceAgentRoutes = require('./routes/voiceAgent');
+const placesRoutes = require('./routes/places');
+const notificationRoutes = require('./routes/notifications');
+
 const { initSocket } = require('./socket/socketHandler');
 const escalationMonitor = require('./services/escalationMonitor');
 
@@ -32,9 +36,25 @@ app.use('/api/auth', authRoutes);
 app.use('/api/incidents', incidentRoutes);
 app.use('/api/units', unitRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/voice-agent', voiceAgentRoutes);
+app.use('/api/places', placesRoutes);
+app.use('/api/notifications', notificationRoutes);
+
 
 // Health check
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
+
+// Root route details
+app.get('/', (_, res) => res.json({
+  message: "Dispatch IQ API Server is running successfully",
+  health: "http://localhost:5000/api/health",
+  frontendPortals: {
+    citizenPortal: "http://localhost:5173",
+    officerPortal: "http://localhost:5174",
+    dispatcherPortal: "http://localhost:5175",
+    adminPortal: "http://localhost:5176"
+  }
+}));
 
 // Initialize Socket.IO events
 initSocket(io);

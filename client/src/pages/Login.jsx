@@ -3,13 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
-const DEMO_ACCOUNTS = [
-  { role: 'dispatcher', email: 'dispatcher@dispatch.com', icon: '🖥️', label: 'Dispatcher' },
-  { role: 'officer', email: 'officer1@dispatch.com', icon: '🚔', label: 'Officer' },
-  { role: 'admin', email: 'admin@dispatch.com', icon: '👑', label: 'Admin' },
-  { role: 'citizen', email: 'citizen@dispatch.com', icon: '👤', label: 'Citizen' },
-];
-
 export default function Login() {
   const { user, login, register } = useAuth();
   const navigate = useNavigate();
@@ -26,7 +19,7 @@ export default function Login() {
 
   // Shared form fields
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('password123');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Registration only form fields
@@ -45,7 +38,7 @@ export default function Login() {
       const routes = { dispatcher: '/control-room', admin: '/control-room', officer: '/officer', citizen: '/report' };
       navigate(routes[user.role] || '/report');
     } catch {
-      toast.error('Invalid credentials. Use demo accounts below.');
+      toast.error('Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -75,17 +68,13 @@ export default function Login() {
     }
   };
 
-  const quickLogin = (account) => {
-    setMode('login');
-    setEmail(account.email);
-    setPassword('password123');
-  };
-
   return (
     <div className="login-page">
       <div className="login-card">
         <div className="login-header">
-          <div className="login-logo">🚨</div>
+          <div className="login-logo" style={{ background: 'transparent', boxShadow: 'none', border: '2px solid #ff9933', borderRadius: '50%', overflow: 'hidden' }}>
+            <img src="/prakasam_police_badge.jpg" alt="Prakasam Police Badge" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
           <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>DispatchIQ</h1>
           <p style={{ fontSize: '0.875rem' }}>Emergency Response & Dispatch Platform</p>
         </div>
@@ -96,7 +85,7 @@ export default function Login() {
             className={`login-tab-btn ${mode === 'login' ? 'active' : ''}`}
             onClick={() => {
               setMode('login');
-              setPassword('password123'); // Default demo password for convenience
+              setPassword('');
             }}
           >
             Sign In
@@ -221,31 +210,6 @@ export default function Login() {
           </form>
         )}
 
-        {mode === 'login' && (
-          <>
-            <div className="login-divider" style={{ margin: '1.5rem 0 1rem' }}>
-              <span>Quick Demo Login</span>
-            </div>
-
-            <div className="role-selector">
-              {DEMO_ACCOUNTS.map(acc => (
-                <button
-                  key={acc.role}
-                  className={`role-btn ${email === acc.email ? 'selected' : ''}`}
-                  onClick={() => quickLogin(acc)}
-                  type="button"
-                >
-                  <span style={{ fontSize: '1.2rem' }}>{acc.icon}</span>
-                  {acc.label}
-                </button>
-              ))}
-            </div>
-
-            <p style={{ textAlign: 'center', fontSize: '0.7rem', marginTop: '1rem', color: 'var(--text-muted)' }}>
-              Demo password: <span style={{ fontFamily: 'monospace', color: 'var(--accent-cyan)' }}>password123</span>
-            </p>
-          </>
-        )}
       </div>
     </div>
   );

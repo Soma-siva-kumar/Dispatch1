@@ -16,21 +16,22 @@ L.Icon.Default.mergeOptions({
 });
 
 const INCIDENT_TYPES = [
-  { value: 'assault', label: '👊 Assault', desc: 'Physical attack on a person' },
-  { value: 'robbery', label: '🔫 Robbery', desc: 'Theft with force or threat' },
-  { value: 'shooting', label: '💥 Shooting', desc: 'Gunfire or gunshot wounds' },
-  { value: 'accident', label: '🚗 Accident', desc: 'Vehicle crash or collision' },
-  { value: 'fire', label: '🔥 Fire', desc: 'Building or vehicle fire' },
-  { value: 'medical', label: '🚑 Medical', desc: 'Medical emergency' },
-  { value: 'domestic_violence', label: '⚠️ Domestic Violence', desc: 'Domestic abuse' },
-  { value: 'theft', label: '🕵️ Theft', desc: 'Stolen property' },
-  { value: 'vandalism', label: '🪨 Vandalism', desc: 'Property damage' },
-  { value: 'suspicious', label: '👁️ Suspicious', desc: 'Suspicious activity' },
-  { value: 'noise', label: '📢 Noise', desc: 'Noise disturbance' },
-  { value: 'other', label: '🚨 Other', desc: 'Other emergency' },
+  { value: 'assault', label: 'Assault', desc: 'Physical attack on a person' },
+  { value: 'robbery', label: 'Robbery', desc: 'Theft with force or threat' },
+  { value: 'shooting', label: 'Shooting', desc: 'Gunfire or gunshot wounds' },
+  { value: 'accident', label: 'Accident', desc: 'Vehicle crash or collision' },
+  { value: 'fire', label: 'Fire', desc: 'Building or vehicle fire' },
+  { value: 'medical', label: 'Medical', desc: 'Medical emergency' },
+  { value: 'domestic_violence', label: 'Domestic Violence', desc: 'Domestic abuse' },
+  { value: 'theft', label: 'Theft', desc: 'Stolen property' },
+  { value: 'vandalism', label: 'Vandalism', desc: 'Property damage' },
+  { value: 'suspicious', label: 'Suspicious', desc: 'Suspicious activity' },
+  { value: 'noise', label: 'Noise', desc: 'Noise disturbance' },
+  { value: 'other', label: 'Other', desc: 'Other emergency' },
 ];
 
 const MAP_CENTER = [17.3850, 78.4867];
+const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 function LocationPicker({ onPick }) {
   useMapEvents({ click(e) { onPick([e.latlng.lng, e.latlng.lat]); } });
@@ -44,6 +45,7 @@ export default function CitizenPortal() {
     title: '', description: '', type: '', weaponInvolved: false, peopleAffected: 1,
   });
   const [coords, setCoords] = useState(null);
+  const [deviceLocation, setDeviceLocation] = useState(null);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(null);
@@ -237,9 +239,13 @@ export default function CitizenPortal() {
               </div>
 
               <div className="map-container" style={{ height: 350 }}>
-                <MapContainer center={coords ? [coords[1], coords[0]] : MAP_CENTER} zoom={13} style={{ height: '100%', width: '100%' }}>
-                  <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                <MapContainer center={coords ? [coords[1], coords[0]] : deviceLocation ? [deviceLocation[1], deviceLocation[0]] : MAP_CENTER} zoom={13} style={{ height: '100%', width: '100%' }}>
+                  <TileLayer url={OSM_TILE_URL} attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' maxZoom={19} />
                   <LocationPicker onPick={setCoords} />
+                  {deviceLocation && (
+                    <Marker position={[deviceLocation[1], deviceLocation[0]]} icon={L.divIcon({ html: '<div style="width:22px;height:22px;border-radius:50%;background:#2196f3;border:3px solid white;box-shadow:0 0 12px rgba(33,150,243,0.55);display:flex;align-items:center;justify-content:center;font-size:14px;color:white;">•</div>', className: '', iconSize: [22, 22], iconAnchor: [11, 11] })}>
+                    </Marker>
+                  )}
                   {coords && <Marker position={[coords[1], coords[0]]} icon={L.divIcon({ html: '<div style="width:32px;height:32px;border-radius:50%;background:#ff1744;border:3px solid white;box-shadow:0 0 15px #ff174480;display:flex;align-items:center;justify-content:center;font-size:14px;">📍</div>', className: '', iconSize: [32, 32], iconAnchor: [16, 16] })} />}
                 </MapContainer>
               </div>

@@ -167,6 +167,9 @@ The server requires the following environment variables (see `.env.example`):
 | `NODE_ENV` | Environment mode | development |
 | `MONGO_URI` | MongoDB connection string | mongodb://127.0.0.1:27017/dispatchiq |
 | `JWT_SECRET` | Secret for JWT signing | (required) |
+| `SEED_MODE` | Enable custom seed execution | false |
+| `SEED_ADMIN_EMAIL` | Initial admin email when seeding | (optional) |
+| `SEED_ADMIN_PASSWORD` | Initial admin password when seeding | (optional) |
 
 ## 📦 Technologies Used
 
@@ -197,7 +200,7 @@ The server requires the following environment variables (see `.env.example`):
 ### Server Scripts
 - `npm start` - Start production server
 - `npm run dev` - Start development server with auto-reload
-- `npm run seed` - Seed database with sample data
+- `npm run seed` - Seed database with custom initial data when configured
 
 ### Client Scripts
 - `npm run dev` - Start development server

@@ -167,6 +167,25 @@ export default function OfficerView() {
                   </div>
                 )}
 
+                {assignment.reportedBy && (
+                  <div style={{
+                    marginTop: '0.5rem',
+                    marginBottom: '1rem',
+                    padding: '0.75rem',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem'
+                  }}>
+                    <div style={{ fontWeight: 700, marginBottom: '0.25rem', color: 'var(--text-primary)' }}>Reporter Information</div>
+                    <div style={{ color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                      <strong>Name:</strong> {assignment.reportedBy.name}<br />
+                      <strong>Email:</strong> {assignment.reportedBy.email || '—'}<br />
+                      <strong>Phone:</strong> {assignment.reportedBy.phone || '—'}
+                    </div>
+                  </div>
+                )}
+
                 {/* Action Buttons */}
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                   {assignment.status === 'dispatched' && (

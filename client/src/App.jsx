@@ -13,6 +13,8 @@ import Incidents from './pages/Incidents';
 import Units from './pages/Units';
 import MyIncidents from './pages/MyIncidents';
 import Users from './pages/Users';
+import Landing from './pages/Landing';
+import CitizenLanding from './pages/CitizenLanding';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -39,9 +41,11 @@ function App() {
         error: { iconTheme: { primary: 'var(--accent-red)', secondary: 'var(--bg-card)' } }
       }} />
       <Routes>
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         
         {/* Citizen Routes */}
+        <Route path="/citizen" element={<CitizenLanding />} />
         <Route path="/report" element={<ProtectedRoute allowedRoles={['citizen', 'dispatcher', 'admin']}><CitizenPortal /></ProtectedRoute>} />
         <Route path="/my-incidents" element={<ProtectedRoute allowedRoles={['citizen']}><MyIncidents /></ProtectedRoute>} />
         
@@ -68,7 +72,7 @@ function App() {
         } />
 
         {/* Default Redirect */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

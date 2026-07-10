@@ -47,6 +47,17 @@ function createUnitIcon(status) {
 
 // Hyderabad center
 const MAP_CENTER = [17.3850, 78.4867];
+const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+function ChangeView({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.setView(center, 14);
+    }
+  }, [center, map]);
+  return null;
+}
 
 export default function ControlRoom() {
   const [incidents, setIncidents] = useState([]);
@@ -214,9 +225,11 @@ export default function ControlRoom() {
                   zoom={12}
                   style={{ height: '100%', width: '100%' }}
                 >
+                  <ChangeView center={selected ? [selected.location.coordinates[1], selected.location.coordinates[0]] : MAP_CENTER} />
                   <TileLayer
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                    attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                    url={OSM_TILE_URL}
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    maxZoom={19}
                   />
 
                   {/* Incident Markers */}
@@ -289,8 +302,39 @@ export default function ControlRoom() {
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <StatusBadge status={selected.status} />
                         {selected.weaponInvolved && <span className="badge badge-p1">⚠️ Weapon</span>}
-                        {selected.location?.address && <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>📍 {selected.location.address}</span>}
+                        {selected.location?.address && (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            📍 {selected.location.address}
+                            {selected.location.coordinates && (
+                              <a
+                                href={`https://maps.google.com/?q=${selected.location.coordinates[1]},${selected.location.coordinates[0]}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-ghost btn-sm"
+                                style={{ marginLeft: '0.5rem', display: 'inline-flex', padding: '0.1rem 0.4rem', height: 'auto', fontSize: '0.7rem', textDecoration: 'underline' }}
+                              >
+                                Open in Maps
+                              </a>
+                            )}
+                          </span>
+                        )}
                       </div>
+                      {selected.reportedBy && (
+                        <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '0.75rem' }}>
+                          <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>Reporter Info: </span>
+                          <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{selected.reportedBy.name}</span>
+                          {selected.reportedBy.email && (
+                            <span style={{ color: 'var(--text-secondary)', marginLeft: '0.6rem' }}>
+                              ✉️ {selected.reportedBy.email}
+                            </span>
+                          )}
+                          {selected.reportedBy.phone && (
+                            <span style={{ color: 'var(--text-secondary)', marginLeft: '0.6rem' }}>
+                              📞 {selected.reportedBy.phone}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
                       {selected.status === 'pending' && (

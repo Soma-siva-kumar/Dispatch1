@@ -43,7 +43,65 @@ const IncidentSchema = new mongoose.Schema({
     status: String,
     timestamp: { type: Date, default: Date.now },
     note: String
-  }]
+  }],
+  images: [{
+    url: { type: String, required: true },
+    publicId: { type: String, default: '' },
+    uploadedAt: { type: Date, default: Date.now }
+  }],
+  assignedPolice: { type: mongoose.Schema.Types.ObjectId, ref: 'PatrolUnit' },
+  assignedFireStation: {
+    name: String,
+    address: String,
+    contact: String,
+    distance: Number,
+    eta: Number,
+    lat: Number,
+    lng: Number,
+    dispatchedAt: Date
+  },
+  assignedHospital: {
+    name: String,
+    address: String,
+    contact: String,
+    distance: Number,
+    eta: Number,
+    lat: Number,
+    lng: Number,
+    dispatchedAt: Date
+  },
+  assignedAmbulance: {
+    name: String,
+    address: String,
+    contact: String,
+    distance: Number,
+    eta: Number,
+    lat: Number,
+    lng: Number,
+    dispatchedAt: Date
+  },
+  dispatchHistory: [{
+    agencyType: { type: String, enum: ['police', 'fire', 'hospital', 'ambulance'] },
+    resourceName: String,
+    status: { type: String, default: 'dispatched' },
+    timestamp: { type: Date, default: Date.now },
+    notes: String
+  }],
+  isVoiceReport: { type: Boolean, default: false },
+  voiceTranscript: { type: String },
+  voiceQATranscript: [{
+    question: { type: String },
+    answer: { type: String }
+  }],
+  aiAnalysis: {
+    incidentType: { type: String },
+    priority: { type: String },
+    keywords: { type: [String] },
+    severity: { type: String },
+    possibleEmergencyCategory: { type: String },
+    suggestedResponse: { type: String },
+    confidenceScore: { type: Number }
+  }
 }, { timestamps: true });
 
 IncidentSchema.index({ location: '2dsphere' });
