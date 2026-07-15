@@ -4,7 +4,8 @@ import { useAuth } from './AuthContext';
 import API from '../api/axios';
 
 const SocketContext = createContext(null);
-const NOTIFICATION_SOUND_URL = '/ai-emergency-alert.mp3';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const NOTIFICATION_SOUND_URL = `${API_BASE_URL.replace(/\/api\/?$/, '')}/assets/ai-emergency-alert.mp3`;
 
 export function SocketProvider({ children }) {
   const { user } = useAuth();

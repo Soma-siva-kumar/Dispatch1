@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -30,6 +31,10 @@ app.set('io', io);
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/assets', express.static(path.join(__dirname, 'public')));
+app.get('/ai-emergency-alert.mp3', (req, res) => {
+  res.sendFile(path.join(__dirname, 'ai-emergency-alert.mp3'));
+});
 
 // Routes
 app.use('/api/auth', authRoutes);

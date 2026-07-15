@@ -4,7 +4,8 @@ import { useAuth } from './AuthContext';
 import API from '../api/axios';
 
 const SocketContext = createContext(null);
-const NOTIFICATION_SOUND_URL = '/ai-emergency-alert.mp3';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const NOTIFICATION_SOUND_URL = `${API_BASE_URL.replace(/\/api\/?$/, '')}/assets/ai-emergency-alert.mp3`;
 
 export function SocketProvider({ children }) {
   const { user } = useAuth();
@@ -91,6 +92,42 @@ export function SocketProvider({ children }) {
       window.setTimeout(() => setNotificationPulse(false), 650);
       playNotificationSound();
     });
+
+    // Also play the same emergency alert sound when an officer receives a dispatch in real-time
+    socketRef.current.on('unit:dispatch', ({ incident, unit, message }) => {
+      setNotificationPulse(true);
+      window.setTimeout(() => setNotificationPulse(false), 650);
+      playNotificationSound();
+
+      // Keep the local notifications list in sync by showing the dispatch in the UI via notifications feed,
+      // but without forcing DB changes here.
+      if (incident?._id) {
+        setNotifications(prev => {
+          const dispatchTitle = incident?.title || 'Emergency Incident';
+          const fakeNotification = {
+            _id: `dispatch:${incident._id}:${unit?._id || 'unknown'}:${Date.now()}`,
+            recipient: unit?.assignedOfficer || user?.id,
+            role: 'officer',
+            type: 'dispatch_assignment',
+            icon: 'car',
+            title: '🚨 New Dispatch Assignment',
+            message: message || `You have been dispatched to: ${dispatchTitle}`,
+            metadata: {
+              incidentId: String(incident._id),
+              incidentType: incident?.type,
+              priority: incident?.priority,
+              location: incident?.location?.address || incident?.title,
+              dispatcherName: incident?.dispatcherName || 'DispatchIQ Auto Dispatch',
+            },
+            createdAt: new Date().toISOString(),
+            read: false,
+          };
+
+          return [fakeNotification, ...prev].slice(0, 100);
+        });
+      }
+    });
+
 
     return () => {
       socketRef.current?.disconnect();

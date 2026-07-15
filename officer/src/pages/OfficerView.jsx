@@ -6,7 +6,8 @@ import { PriorityBadge, StatusBadge } from '../components/IncidentComponents';
 import IncidentImageGallery from '../components/IncidentImageGallery';
 import API from '../api/axios';
 import toast from 'react-hot-toast';
-import { MapPin, Radio, CheckCircle, Clock, Navigation, LocateFixed, Loader } from 'lucide-react';
+import { MapPin, Radio, CheckCircle, Clock, Navigation, LocateFixed, Loader, X } from 'lucide-react';
+import { getDeviceCoordinates } from '../utils/geolocation';
 
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -32,6 +33,46 @@ function ChangeView({ center }) {
   }, [center, map]);
   return null;
 }
+
+let audioInstance = null;
+
+const initAudio = () => {
+  if (!audioInstance) {
+    audioInstance = new Audio('/ai-emergency-alert.mp3');
+    audioInstance.loop = true;
+    audioInstance.volume = 1.0;
+    audioInstance.preload = 'auto';
+    // Play and immediately pause to unlock audio context in some browsers
+    audioInstance.play().then(() => {
+      audioInstance.pause();
+      audioInstance.currentTime = 0;
+    }).catch(() => {});
+  }
+};
+
+if (typeof window !== 'undefined') {
+  document.addEventListener('click', initAudio, { once: true });
+  document.addEventListener('keydown', initAudio, { once: true });
+}
+
+const playNotificationAudio = () => {
+  initAudio();
+  if (audioInstance) {
+    audioInstance.muted = false;
+    audioInstance.volume = 1.0;
+    audioInstance.currentTime = 0;
+    audioInstance.play().catch(err => {
+      console.warn('Audio playback failed:', err);
+    });
+  }
+};
+
+const stopNotificationAudio = () => {
+  if (audioInstance) {
+    audioInstance.pause();
+    audioInstance.currentTime = 0;
+  }
+};
 
 export default function OfficerView() {
   const { user } = useAuth();
@@ -70,10 +111,46 @@ export default function OfficerView() {
     // Listen for incoming dispatches
     const cleanup = onEvent('unit:dispatch', ({ incident, message }) => {
       setAssignment(incident);
-      toast(`📟 ${message}`, { duration: 8000, style: { background: 'rgba(255,23,68,0.2)', border: '1px solid #ff1744' } });
+      playNotificationAudio();
+
+      toast((t) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#fff' }}>
+          <div style={{ flex: 1, fontSize: '0.85rem' }}>
+            <strong>📟 Dispatch:</strong> {message}
+          </div>
+          <button
+            onClick={() => {
+              stopNotificationAudio();
+              if (myUnit) {
+                emitAck(incident._id, myUnit._id);
+                setAssignment(prev => ({ ...prev, status: 'en_route' }));
+                toast.success('✅ Acknowledged — en route!');
+              }
+              toast.dismiss(t.id);
+            }}
+            style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+            title="Accept Assignment"
+          >
+            <CheckCircle size={18} />
+          </button>
+          <button
+            onClick={() => {
+              stopNotificationAudio();
+              toast.dismiss(t.id);
+            }}
+            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+            title="Dismiss Alert"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      ), {
+        duration: Infinity,
+        style: { background: '#1e293b', border: '1px solid #ff1744', color: '#fff', padding: '10px 14px', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }
+      });
     });
     return cleanup;
-  }, []);
+  }, [myUnit]);
 
   const loadData = async () => {
     try {
@@ -103,6 +180,7 @@ export default function OfficerView() {
     emitAck(assignment._id, myUnit._id);
     setAssignment(prev => ({ ...prev, status: 'en_route' }));
     toast.success('✅ Acknowledged — en route!');
+    stopNotificationAudio();
   };
 
   const handleStatusUpdate = async (status) => {
@@ -124,27 +202,28 @@ export default function OfficerView() {
     finally { setStatusUpdating(false); }
   };
 
-  const broadcastLocation = () => {
+  const broadcastLocation = async () => {
     if (!myUnit) return;
-    navigator.geolocation.getCurrentPosition(pos => {
-      const coords = [pos.coords.longitude, pos.coords.latitude];
-      setDeviceLocation(coords);
-      API.patch(`/units/${myUnit._id}/location`, { coordinates: coords });
-      toast.success('📡 Location broadcast!');
-    }, () => toast.error('GPS unavailable'));
+    try {
+      const coords = await getDeviceCoordinates();
+      if (coords) {
+        setDeviceLocation(coords);
+        API.patch(`/units/${myUnit._id}/location`, { coordinates: coords });
+        toast.success('📡 Location broadcast!');
+      } else {
+        toast.error('GPS unavailable');
+      }
+    } catch (err) {
+      toast.error('GPS unavailable');
+    }
   };
 
-  const refreshOfficerLocation = () => {
+  const refreshOfficerLocation = async () => {
     if (!myUnit) return;
-    if (!navigator.geolocation) {
-      toast.error('GPS unavailable');
-      return;
-    }
-
     setLocationUpdating(true);
-    navigator.geolocation.getCurrentPosition(async pos => {
-      const coords = [pos.coords.longitude, pos.coords.latitude];
-      try {
+    try {
+      const coords = await getDeviceCoordinates();
+      if (coords) {
         const { data } = await API.patch(`/units/${myUnit._id}/location`, { coordinates: coords });
         setDeviceLocation(coords);
         setMyUnit(prev => ({
@@ -153,15 +232,14 @@ export default function OfficerView() {
         }));
         setMapCenterOverride([coords[1], coords[0]]);
         toast.success('Current location updated');
-      } catch {
-        toast.error('Location update failed');
-      } finally {
-        setLocationUpdating(false);
+      } else {
+        toast.error('GPS unavailable');
       }
-    }, () => {
+    } catch (err) {
+      toast.error('Location update failed');
+    } finally {
       setLocationUpdating(false);
-      toast.error('GPS unavailable');
-    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    }
   };
 
   if (loading) return <div className="loading-screen"><div className="spinner" /><p>Loading assignments...</p></div>;

@@ -7,6 +7,7 @@ import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { MapPin, AlertTriangle, Send } from 'lucide-react';
+import { getDeviceCoordinates } from '../utils/geolocation';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -51,16 +52,21 @@ export default function CitizenPortal() {
   const [submitted, setSubmitted] = useState(null);
   const [step, setStep] = useState(1); // 1=type, 2=details, 3=location
 
-  const getGPS = () => {
+  const getGPS = async () => {
     setGpsLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      pos => { setCoords([pos.coords.longitude, pos.coords.latitude]); setGpsLoading(false); },
-      () => {
+    try {
+      const location = await getDeviceCoordinates();
+      if (location) {
+        setCoords(location);
+      } else {
         // Fallback: random Hyderabad coord
         setCoords([78.4867 + (Math.random() - 0.5) * 0.1, 17.3850 + (Math.random() - 0.5) * 0.08]);
-        setGpsLoading(false);
       }
-    );
+    } catch (err) {
+      setCoords([78.4867 + (Math.random() - 0.5) * 0.1, 17.3850 + (Math.random() - 0.5) * 0.08]);
+    } finally {
+      setGpsLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {

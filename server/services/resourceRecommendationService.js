@@ -70,13 +70,14 @@ async function searchNearbyResources(lat, lng, type) {
   for (const radius of radii) {
     // If external APIs (like HERE or Google Places) are configured, we could call them.
     // Let's implement Google Places Nearby Search call as a preferred API mechanism:
-    if (process.env.GOOGLE_PLACES_API_KEY) {
+    const googleApiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
+    if (googleApiKey) {
       try {
         const googleType = type === 'hospital' ? 'hospital' : type === 'fire_station' ? 'fire_station' : 'doctor';
         const url = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
         const { data } = await axios.get(url, {
           params: {
-            key: process.env.GOOGLE_PLACES_API_KEY,
+            key: googleApiKey,
             location: `${lat},${lng}`,
             radius: radius * 1000, // convert to meters
             type: googleType,

@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { MapPin, Send, LocateFixed, RefreshCw, ShieldAlert, FileText, MapPinned, Camera } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import ImageUploader from '../components/ImageUploader';
+import { getDeviceCoordinates } from '../utils/geolocation';
 
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -227,31 +228,25 @@ export default function CitizenPortal() {
     }, 400);
   }, [lang, t]);
 
-  const getGPS = useCallback(() => {
-    if (!navigator.geolocation) {
-      setGpsError(t('portal.gpsUnsupported'));
-      return;
-    }
+  const getGPS = useCallback(async () => {
     setGpsLoading(true);
     setGpsError('');
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        setGpsLoading(false);
-        const location = [pos.coords.longitude, pos.coords.latitude];
+    try {
+      const location = await getDeviceCoordinates();
+      setGpsLoading(false);
+      if (location) {
         setDeviceLocation(location);
         applyCoords(location);
         toast.success(`📍 ${t('portal.gpsCaptured')}!`);
-      },
-      err => {
-        setGpsLoading(false);
-        let msg = t('portal.gpsPinHint');
-        if (err.code === 1) msg = t('portal.gpsDenied');
-        if (err.code === 3) msg = t('portal.gpsTimeout');
-        setGpsError(msg);
+      } else {
+        setGpsError(t('portal.gpsPinHint'));
         toast.error(t('portal.gpsPinHint'));
-      },
-      GPS_OPTIONS
-    );
+      }
+    } catch (err) {
+      setGpsLoading(false);
+      setGpsError(t('portal.gpsPinHint'));
+      toast.error(t('portal.gpsPinHint'));
+    }
   }, [applyCoords, t]);
 
   useEffect(() => {

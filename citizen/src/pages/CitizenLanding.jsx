@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import API from '../api/axios';
+import { getDeviceCoordinates } from '../utils/geolocation';
 import {
   Shield,
   Phone,
@@ -161,15 +162,11 @@ export default function CitizenLanding() {
   ];
 
   const vaGetLocationPromise = () => {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        resolve({ coords: null, address: 'GPS not supported by your browser' });
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const { latitude, longitude } = pos.coords;
-          const coords = [longitude, latitude];
+    return new Promise(async (resolve) => {
+      try {
+        const coords = await getDeviceCoordinates();
+        if (coords) {
+          const [longitude, latitude] = coords;
           let address = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
           try {
             const res = await fetch(
@@ -190,13 +187,13 @@ export default function CitizenLanding() {
             console.warn("nominatim error:", e);
           }
           resolve({ coords, address });
-        },
-        (err) => {
-          console.warn("geolocation error:", err);
+        } else {
           resolve({ coords: null, address: 'Location permission denied or timed out' });
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-      );
+        }
+      } catch (err) {
+        console.warn("geolocation error:", err);
+        resolve({ coords: null, address: 'Location permission denied or timed out' });
+      }
     });
   };
 

@@ -11,6 +11,7 @@ import IncidentImageGallery from '../components/IncidentImageGallery';
 import RecommendationPanel from '../components/RecommendationPanel';
 import { AlertTriangle, Zap, X, CheckCircle, Phone, MapPin, Mic, Compass, LocateFixed } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getDeviceLatLng } from '../utils/geolocation';
 
 
 // Fix Leaflet default icons
@@ -94,6 +95,48 @@ function ChangeView({ center }) {
   return null;
 }
 
+let audioInstance = null;
+
+const initAudio = () => {
+  if (!audioInstance) {
+    audioInstance = new Audio('/ai-emergency-alert.mp3');
+    audioInstance.loop = true;
+    audioInstance.volume = 1.0;
+    audioInstance.preload = 'auto';
+    // Play and immediately pause to unlock audio context in some browsers
+    audioInstance.play().then(() => {
+      audioInstance.pause();
+      audioInstance.currentTime = 0;
+    }).catch(() => {});
+  }
+};
+
+if (typeof window !== 'undefined') {
+  document.addEventListener('click', initAudio, { once: true });
+  document.addEventListener('keydown', initAudio, { once: true });
+}
+
+let activeAlertsCount = 0;
+
+const playNotificationAudio = () => {
+  initAudio();
+  if (audioInstance) {
+    audioInstance.muted = false;
+    audioInstance.volume = 1.0;
+    audioInstance.currentTime = 0;
+    audioInstance.play().catch(err => {
+      console.warn('Audio playback failed:', err);
+    });
+  }
+};
+
+const stopNotificationAudio = () => {
+  if (audioInstance) {
+    audioInstance.pause();
+    audioInstance.currentTime = 0;
+  }
+};
+
 export default function ControlRoom() {
   const [incidents, setIncidents] = useState([]);
   const [units, setUnits] = useState([]);
@@ -124,24 +167,20 @@ export default function ControlRoom() {
     }, 2000);
   };
 
-  const handleLocateMe = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser');
-      return;
-    }
+  const handleLocateMe = async () => {
     const toastId = toast.loading('Obtaining current location...');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setMapCenter([latitude, longitude]);
-        setDeviceLocation([latitude, longitude]);
+    try {
+      const latLng = await getDeviceLatLng();
+      if (latLng) {
+        setMapCenter(latLng);
+        setDeviceLocation(latLng);
         toast.success('Location updated!', { id: toastId });
-      },
-      (err) => {
-        toast.error(`Error: ${err.message}`, { id: toastId });
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
-    );
+      } else {
+        toast.error('Could not obtain location. Please check browser permissions.', { id: toastId });
+      }
+    } catch (err) {
+      toast.error(`Error: ${err.message || 'Failed to get location'}`, { id: toastId });
+    }
   };
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -194,8 +233,47 @@ export default function ControlRoom() {
     const cleanups = [
       onEvent('incident:new', ({ incident }) => {
         setIncidents(prev => [incident, ...prev]);
-        toast(`🚨 New ${incident.priority} incident: ${incident.title}`, {
-          style: { background: PRIORITY_COLORS[incident.priority] + '22', border: `1px solid ${PRIORITY_COLORS[incident.priority]}` }
+        
+        activeAlertsCount++;
+        if (activeAlertsCount === 1) {
+          playNotificationAudio();
+        }
+
+        toast((t) => (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#fff' }}>
+            <div style={{ flex: 1, fontSize: '0.85rem' }}>
+              <strong>New {incident.priority} Incident:</strong> {incident.title}
+            </div>
+            <button
+              onClick={() => {
+                activeAlertsCount = Math.max(0, activeAlertsCount - 1);
+                if (activeAlertsCount === 0) {
+                  stopNotificationAudio();
+                }
+                toast.dismiss(t.id);
+              }}
+              style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+              title="Acknowledge Notification"
+            >
+              <CheckCircle size={18} />
+            </button>
+            <button
+              onClick={() => {
+                activeAlertsCount = Math.max(0, activeAlertsCount - 1);
+                if (activeAlertsCount === 0) {
+                  stopNotificationAudio();
+                }
+                toast.dismiss(t.id);
+              }}
+              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+              title="Dismiss Alert"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        ), {
+          duration: Infinity,
+          style: { background: '#1e293b', border: `1px solid ${PRIORITY_COLORS[incident.priority]}`, color: '#fff', padding: '10px 14px', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }
         });
       }),
       onEvent('incident:update', ({ incident }) => {

@@ -59,6 +59,48 @@ function ChangeView({ center }) {
   return null;
 }
 
+let audioInstance = null;
+
+const initAudio = () => {
+  if (!audioInstance) {
+    audioInstance = new Audio('/ai-emergency-alert.mp3');
+    audioInstance.loop = true;
+    audioInstance.volume = 1.0;
+    audioInstance.preload = 'auto';
+    // Play and immediately pause to unlock audio context in some browsers
+    audioInstance.play().then(() => {
+      audioInstance.pause();
+      audioInstance.currentTime = 0;
+    }).catch(() => {});
+  }
+};
+
+if (typeof window !== 'undefined') {
+  document.addEventListener('click', initAudio, { once: true });
+  document.addEventListener('keydown', initAudio, { once: true });
+}
+
+let activeAlertsCount = 0;
+
+const playNotificationAudio = () => {
+  initAudio();
+  if (audioInstance) {
+    audioInstance.muted = false;
+    audioInstance.volume = 1.0;
+    audioInstance.currentTime = 0;
+    audioInstance.play().catch(err => {
+      console.warn('Audio playback failed:', err);
+    });
+  }
+};
+
+const stopNotificationAudio = () => {
+  if (audioInstance) {
+    audioInstance.pause();
+    audioInstance.currentTime = 0;
+  }
+};
+
 export default function ControlRoom() {
   const [incidents, setIncidents] = useState([]);
   const [units, setUnits] = useState([]);
@@ -82,8 +124,47 @@ export default function ControlRoom() {
     const cleanups = [
       onEvent('incident:new', ({ incident }) => {
         setIncidents(prev => [incident, ...prev]);
-        toast(`🚨 New ${incident.priority} incident: ${incident.title}`, {
-          style: { background: PRIORITY_COLORS[incident.priority] + '22', border: `1px solid ${PRIORITY_COLORS[incident.priority]}` }
+
+        activeAlertsCount++;
+        if (activeAlertsCount === 1) {
+          playNotificationAudio();
+        }
+
+        toast((t) => (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#fff' }}>
+            <div style={{ flex: 1, fontSize: '0.85rem' }}>
+              <strong>New {incident.priority} Incident:</strong> {incident.title}
+            </div>
+            <button
+              onClick={() => {
+                activeAlertsCount = Math.max(0, activeAlertsCount - 1);
+                if (activeAlertsCount === 0) {
+                  stopNotificationAudio();
+                }
+                toast.dismiss(t.id);
+              }}
+              style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+              title="Acknowledge Notification"
+            >
+              <CheckCircle size={18} />
+            </button>
+            <button
+              onClick={() => {
+                activeAlertsCount = Math.max(0, activeAlertsCount - 1);
+                if (activeAlertsCount === 0) {
+                  stopNotificationAudio();
+                }
+                toast.dismiss(t.id);
+              }}
+              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+              title="Dismiss Alert"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        ), {
+          duration: Infinity,
+          style: { background: '#1e293b', border: `1px solid ${PRIORITY_COLORS[incident.priority]}`, color: '#fff', padding: '10px 14px', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }
         });
       }),
       onEvent('incident:update', ({ incident }) => {
